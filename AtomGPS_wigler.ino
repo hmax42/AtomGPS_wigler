@@ -1,5 +1,10 @@
-#include <M5Atom.h>
+//#define M5
+#include "M5Atom.h"
 #include <SD.h>
+#ifdef M5
+#else
+#include <Adafruit_NeoPixel.h>
+#endif
 #include <SPI.h>
 #include <TinyGPS++.h>
 #include <WiFi.h>
@@ -22,6 +27,12 @@ TinyGPSPlus gps;
 char fileName[50];
 const int maxMACs = 400;  // TESTING: buffer size
 char macAddressArray[maxMACs][20];
+
+#ifdef M5
+#else
+Adafruit_NeoPixel led = Adafruit_NeoPixel(1, 27, NEO_GRB + NEO_KHZ800);
+#endif
+
 int macArrayIndex = 0;
 
 // Network Scanning
@@ -33,8 +44,15 @@ int timePerChannel[14] = { 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200
 void setup() {
   Serial.begin(115200);
   Serial.println("Starting...");
+#ifdef M5
   M5.begin(true, false, true);
-  SPI.begin(23, 33, 19, -1);  // investigate the -1 assignment and esp32 boards
+#else
+  led.begin();
+  led.setPixelColor(0, 0x000000);
+  led.show();
+#endif
+  SPI.begin(23, 33, 19, -1);
+
   while (!SD.begin(-1, SPI, 40000000)) {
     Serial.println("SD Card initialization failed! Retrying...");
     blinkLED(RED, 500);  // will hang here until SD is readable
@@ -113,7 +131,12 @@ void blinkLED(uint32_t color, unsigned long interval) {
 
   if (currentMillis - previousBlinkMillis >= interval) {
     ledState = !ledState;
+#ifdef M5
     M5.dis.drawpix(0, ledState ? color : OFF);
+#else
+	led.setPixelColor(0, ledState ? color : OFF);
+    led.show();
+#endif
     previousBlinkMillis = currentMillis;
   }
 }
@@ -126,7 +149,6 @@ void waitForGPSFix() {
     }
     blinkLED(PURPLE, 250);
   }
-  M5.dis.clear();
   Serial.println("GPS fix obtained.");
 }
 
