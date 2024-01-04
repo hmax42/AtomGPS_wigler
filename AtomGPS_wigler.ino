@@ -184,14 +184,16 @@ bool isMACSeen(const char* mac) {
   return false;
 }
 
-void logData(const char* data) {
+int logData(const char* data) {
   File dataFile = SD.open(fileName, FILE_APPEND);
   if (dataFile) {
     dataFile.println(data);
     dataFile.close();
+    return 1;
   } else {
     Serial.println("Error opening " + String(fileName));
     blinkLED(RED, 500);
+    return 0;
   }
 }
 
