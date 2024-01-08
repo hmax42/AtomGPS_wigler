@@ -1,7 +1,14 @@
 //use M5 lib or use Adafruit NeoPixel
 //#define M5
+
+#define NO_OF_NODES 2
+#define NODE_ID 2
+
+#if NODE_ID==1
+#elif NODE_ID==2
 //scan wifi channels 1, 6, 11, 14 and ble or just wifi (code taken from j.hewitt)
-//#define TYPEB
+#define TYPEB
+#endif
 #include "M5Atom.h"
 #include <SD.h>
 #ifdef M5
@@ -30,6 +37,7 @@ TinyGPSPlus gps;
 char fileName[50];
 const int maxMACs = 400;  // TESTING: buffer size
 char macAddressArray[maxMACs][20];
+int macArrayIndex = 0;
 
 #ifdef TYPEB
 //copied from j.hewitt rev3
@@ -105,6 +113,7 @@ void clear_mac_history() {
 
   mac_history_cursor = 0;
 }
+
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
       unsigned char mac_bytes[6];
@@ -128,8 +137,8 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
           float altitude = gps.altitude.meters();
           float accuracy = gps.hdop.hdop();
 
-          String out = advertisedDevice.getAddress().toString().c_str() + String(",") + advertisedDevice.getName().c_str() + String(",") + "[BLE]," + utc + String(",0,") + String(advertisedDevice.getRSSI()) + String(",") + String(lat, 6) + String(",") + String(lon, 6) + String(",") + String(altitude, 2) + String(",") + String(accuracy, 2) + String(",BLE");
-          logData(out);
+          String out = advertisedDevice.getAddress().toString().c_str() + String(",") + advertisedDevice.getName().c_str() + String(",") + "[BLE]," + utc + String(",") + String("0") + String(",") + String(advertisedDevice.getRSSI()) + String(",") + String(lat, 6) + String(",") + String(lon, 6) + String(",") + String(altitude, 2) + String(",") + String(accuracy, 2) + String(",") + String("BLE");
+          logData(out.c_str());
         }
       }
     }
@@ -145,16 +154,11 @@ void await_sd() {
 }
 #endif
 
-String fileName;
-
 #ifdef M5
 #else
 Adafruit_NeoPixel led = Adafruit_NeoPixel(1, 27, NEO_GRB + NEO_KHZ800);
 #endif
 
-const int maxMACs = 75;
-String macAddressArray[maxMACs];
-int macArrayIndex = 0;
 
 // Network Scanning
 const int popularChannels[] = { 1, 6, 11 };
@@ -168,6 +172,7 @@ void setup() {
 #ifdef M5
   M5.begin(true, false, true);
 #else
+  M5.begin(true, false, false);
   led.begin();
   led.setPixelColor(0, 0x000000);
   led.show();
@@ -214,12 +219,12 @@ void loop() {
 
   if (M5.Btn.wasPressed()) {
     buttonLedState = !buttonLedState;
-#ifdef M5		
+#ifdef M5
     M5.dis.drawpix(0, buttonLedState ? BLUE : OFF);  // flash blue when toggled on
 #else
-	led.setPixelColor(0, buttonLedState ? BLUE : OFF);
+    led.setPixelColor(0, buttonLedState ? BLUE : OFF);
     led.show();
-#endif	
+#endif
     delay(80);
   }
 
@@ -230,17 +235,17 @@ void loop() {
   if (gps.location.isValid()) {
     unsigned long currentMillis = millis();  //get the time here for accurate blinks
     if (currentMillis - lastBlinkTime >= blinkInterval && buttonLedState) {
-#ifdef M5		
+#ifdef M5
       M5.dis.drawpix(0, GREEN);  // Flash green without a static blink
       delay(120);
       M5.dis.clear();
 #else
-	led.setPixelColor(0, GREEN);
-    led.show();
+      led.setPixelColor(0, GREEN);
+      led.show();
       delay(120);
-	led.setPixelColor(0, OFF);
-    led.show();
-#endif	
+      led.setPixelColor(0, OFF);
+      led.show();
+#endif
       lastBlinkTime = currentMillis;
     }
 
@@ -261,7 +266,7 @@ void loop() {
 
     // Dynamic async per-channel scanning
 #ifdef TYPEB
-    int channel = 1; 
+    int channel = 1;
     for (int y = 1; y <= 4; y++) {
       switch (channel) {
         case 1:
@@ -309,7 +314,7 @@ void blinkLED(uint32_t color, unsigned long interval) {
 #ifdef M5
     M5.dis.drawpix(0, ledState ? color : OFF);
 #else
-	led.setPixelColor(0, ledState ? color : OFF);
+    led.setPixelColor(0, ledState ? color : OFF);
     led.show();
 #endif
     previousBlinkMillis = currentMillis;
@@ -333,7 +338,11 @@ void initializeFile() {
   char fileDateStamp[16];
   sprintf(fileDateStamp, "%04d-%02d-%02d-", gps.date.year(), gps.date.month(), gps.date.day());
   do {
+#if NO_OF_NODES > 1
+    snprintf(fileName, sizeof(fileName), "/%s-AtomWigler-%s%d.csv", String(NODE_ID), fileDateStamp, fileNumber);
+#else
     snprintf(fileName, sizeof(fileName), "/AtomWigler-%s%d.csv", fileDateStamp, fileNumber);
+#endif
     isNewFile = !SD.exists(fileName);
     fileNumber++;
   } while (!isNewFile);
