@@ -1,8 +1,10 @@
+//original source 1.3 rebased
+
 //use M5 lib or use Adafruit NeoPixel
 //#define M5
 
 #define NO_OF_NODES 2
-#define NODE_ID 2
+#define NODE_ID 1
 
 #if NODE_ID==1
 #elif NODE_ID==2
@@ -10,6 +12,7 @@
 #define TYPEB
 #endif
 #include "M5Atom.h"
+//#include "M5Stack.h"
 #include <SD.h>
 #ifdef M5
 #else
@@ -220,7 +223,7 @@ void loop() {
   if (M5.Btn.wasPressed()) {
     buttonLedState = !buttonLedState;
 #ifdef M5
-    M5.dis.drawpix(0, buttonLedState ? BLUE : OFF);  // flash blue when toggled on
+    M5.drawpix(0, buttonLedState ? BLUE : OFF);  // flash blue when toggled on
 #else
     led.setPixelColor(0, buttonLedState ? BLUE : OFF);
     led.show();
@@ -236,9 +239,9 @@ void loop() {
     unsigned long currentMillis = millis();  //get the time here for accurate blinks
     if (currentMillis - lastBlinkTime >= blinkInterval && buttonLedState) {
 #ifdef M5
-      M5.dis.drawpix(0, GREEN);  // Flash green without a static blink
+      M5.drawpix(0, GREEN);  // Flash green without a static blink
       delay(120);
-      M5.dis.clear();
+      M5.clear();
 #else
       led.setPixelColor(0, GREEN);
       led.show();
@@ -312,7 +315,7 @@ void blinkLED(uint32_t color, unsigned long interval) {
   if (currentMillis - previousBlinkMillis >= interval) {
     ledState = !ledState;
 #ifdef M5
-    M5.dis.drawpix(0, ledState ? color : OFF);
+    M5.drawpix(0, ledState ? color : OFF);
 #else
     led.setPixelColor(0, ledState ? color : OFF);
     led.show();
